@@ -34,6 +34,7 @@ class ReaderViewModel(
     private lateinit var slug: String
     private var titleInfo = ""
     private var coverInfo = ""
+    private var chapterLoad: kotlinx.coroutines.Job? = null
 
     fun start(s: Source, sl: String, lb: String, title: String, cover: String) {
         source = s
@@ -56,9 +57,12 @@ class ReaderViewModel(
                 coverUrl = coverInfo
             )
         }
-        viewModelScope.launch {
+        chapterLoad?.cancel()
+        chapterLoad = viewModelScope.launch {
+            val currentSource = source
+            val currentSlug = slug
             // Load chapter pages first so reading can start.
-            val pagesResult = runCatching { repository.getChapter(source, slug, lb) }
+            val pagesResult = runCatching { repository.getChapter(currentSource, currentSlug, lb) }
             var prev: String? = null
             var next: String? = null
             val title = titleInfo
@@ -66,7 +70,7 @@ class ReaderViewModel(
 
             if (pagesResult.isSuccess) {
                 // Load the chapter list to compute prev/next navigation.
-                runCatching { repository.getDetail(source, slug) }
+                runCatching { repository.getDetail(currentSource, currentSlug) }
                     .getOrNull()
                     ?.chapters
                     ?.let { chapters -> computeNav(chapters, lb) }
@@ -115,12 +119,16 @@ class ReaderViewModel(
     }
 
     fun saveProgress(pageIndex: Int) {
+        if (!::source.isInitialized || !::slug.isInitialized) return
+        val s = source
+        val sl = slug
+        val key = "${s.id}:$sl"
         viewModelScope.launch {
             store.addHistory(
                 ReadingRecord(
-                    key = "${source.id}:$slug",
-                    sourceId = source.id,
-                    slug = slug,
+                    key = key,
+                    sourceId = s.id,
+                    slug = sl,
                     title = titleInfo,
                     coverUrl = coverInfo,
                     chapterLabel = _state.value.chapterLabel,

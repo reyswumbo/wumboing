@@ -79,9 +79,10 @@ fun ReaderScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
+        val error = state.error
         when {
             state.loading -> LoadingState()
-            state.error != null -> ErrorState(state.error!!)
+            error != null -> ErrorState(error)
             state.imageUrls.isEmpty() -> ErrorState("Chapter ini belum tersedia.")
             else -> {
                 Column(Modifier.fillMaxSize()) {

@@ -144,9 +144,10 @@ fun HomeScreen(
                     )
                 }
 
+                val error = state.error
                 when {
                     state.loading && state.comics.isEmpty() -> LoadingState()
-                    state.error != null && state.comics.isEmpty() -> ErrorState(state.error!!)
+                    error != null && state.comics.isEmpty() -> ErrorState(error)
                     state.comics.isEmpty() -> EmptyState("Belum ada komik. Coba sumber lain.")
                     else -> ComicGrid(
                         comics = state.comics,

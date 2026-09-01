@@ -80,9 +80,10 @@ fun DetailScreen(
         }
     ) { padding ->
         val detail = state.detail
+        val error = state.error
         when {
             state.loading -> LoadingState(Modifier.padding(padding))
-            state.error != null -> ErrorState(state.error!!, Modifier.padding(padding))
+            error != null -> ErrorState(error, Modifier.padding(padding))
             detail == null -> EmptyState("Detail tidak ditemukan.", Modifier.padding(padding))
             else -> DetailContent(
                 detail = detail,
