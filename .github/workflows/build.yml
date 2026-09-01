@@ -29,9 +29,9 @@ jobs:
 
       - name: Create release keystore
         run: |
-          mkdir -p $HOME/.wumboing
+          mkdir -p /tmp/wumboing
           keytool -genkeypair -v \
-            -keystore $HOME/.wumboing/wumboing.jks \
+            -keystore /tmp/wumboing/wumboing.jks \
             -alias wumboing \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass wumboing -keypass wumboing \
@@ -40,7 +40,7 @@ jobs:
       - name: Build Release APK & AAB
         run: ./gradlew assembleRelease bundleRelease --no-daemon
         env:
-          WUMBOING_KEYSTORE: ${{ runner.home }}/.wumboing/wumboing.jks
+          WUMBOING_KEYSTORE: /tmp/wumboing/wumboing.jks
           WUMBOING_STORE_PASS: wumboing
           WUMBOING_KEY_ALIAS: wumboing
           WUMBOING_KEY_PASS: wumboing
