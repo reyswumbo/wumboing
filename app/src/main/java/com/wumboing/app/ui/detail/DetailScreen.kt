@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,12 +79,13 @@ fun DetailScreen(
             )
         }
     ) { padding ->
+        val detail = state.detail
         when {
             state.loading -> LoadingState(Modifier.padding(padding))
             state.error != null -> ErrorState(state.error!!, Modifier.padding(padding))
-            state.detail == null -> EmptyState("Detail tidak ditemukan.", Modifier.padding(padding))
+            detail == null -> EmptyState("Detail tidak ditemukan.", Modifier.padding(padding))
             else -> DetailContent(
-                detail = state.detail,
+                detail = detail,
                 onOpenReader = onOpenReader,
                 modifier = Modifier.padding(padding)
             )

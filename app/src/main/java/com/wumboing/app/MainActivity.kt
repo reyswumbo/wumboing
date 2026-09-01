@@ -9,6 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -24,6 +25,7 @@ import com.wumboing.app.ui.library.LibraryScreen
 import com.wumboing.app.ui.navigation.Routes
 import com.wumboing.app.ui.reader.ReaderScreen
 import com.wumboing.app.ui.theme.WumboingTheme
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 
 class MainActivity : ComponentActivity() {
@@ -44,6 +46,7 @@ fun WumboingAppRoot(store: LocalStore) {
     val savedDark by store.darkMode.collectAsState(initial = true)
     var darkOverride by remember { mutableStateOf<Boolean?>(null) }
     val darkTheme = darkOverride ?: savedDark
+    val scope = rememberCoroutineScope()
 
     WumboingTheme(darkTheme = darkTheme) {
         val nav = rememberNavController()
@@ -51,9 +54,9 @@ fun WumboingAppRoot(store: LocalStore) {
             nav = nav,
             darkTheme = darkTheme,
             onToggleTheme = {
-                darkOverride = !darkTheme
-                store.setDarkMode(!darkTheme)
-                darkOverride = darkOverride
+                val newDark = !darkTheme
+                darkOverride = newDark
+                scope.launch { store.setDarkMode(newDark) }
             }
         )
     }
