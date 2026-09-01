@@ -8,6 +8,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -61,7 +62,7 @@ private val LightScheme = lightColorScheme(
     outline = Color(0xFFC4A8B2)
 )
 
-private val CuteFont: FontFamily = FontFamily(R.font.fredoka_family)
+private val CuteFont: FontFamily = FontFamily(Font(R.font.fredoka_family))
 
 private val AppTypography = Typography(
     displayLarge = TextStyle(fontFamily = CuteFont, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp),
