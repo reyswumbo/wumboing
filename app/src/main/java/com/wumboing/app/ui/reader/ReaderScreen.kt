@@ -2,11 +2,14 @@ package com.wumboing.app.ui.reader
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +18,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -115,14 +120,14 @@ fun ReaderScreen(
                     ) {
                         itemsIndexed(state.imageUrls) { index, url ->
                             PageImage(url = url, pageIndex = index + 1)
-                            if (index == state.imageUrls.size - 1) {
-                                Text(
-                                    "— Akhir Chapter —",
-                                    color = Color.Gray,
-                                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                        }
+                        item {
+                            ChapterNavFooter(
+                                prevLabel = state.prevLabel,
+                                nextLabel = state.nextLabel,
+                                onPrev = { state.prevLabel?.let { onChapterChanged(it) } },
+                                onNext = { state.nextLabel?.let { onChapterChanged(it) } }
+                            )
                         }
                     }
                 }
@@ -156,5 +161,46 @@ private fun PageImage(url: String, pageIndex: Int) {
             modifier = Modifier.fillMaxWidth(),
             contentScale = ContentScale.FillWidth
         )
+    }
+}
+
+@Composable
+private fun ChapterNavFooter(
+    prevLabel: String?,
+    nextLabel: String?,
+    onPrev: () -> Unit,
+    onNext: () -> Unit
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "— Akhir Chapter —",
+            color = Color.Gray,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(
+                onClick = onPrev,
+                enabled = prevLabel != null,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Text("Sebelumnya", modifier = Modifier.padding(start = 8.dp))
+            }
+            Button(
+                onClick = onNext,
+                enabled = nextLabel != null,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                Text("Berikutnya", modifier = Modifier.padding(end = 8.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+            }
+        }
     }
 }

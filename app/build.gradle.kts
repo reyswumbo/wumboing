@@ -17,10 +17,27 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("WUMBOING_KEYSTORE")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("WUMBOING_STORE_PASS") ?: "wumboing"
+                keyAlias = System.getenv("WUMBOING_KEY_ALIAS") ?: "wumboing"
+                keyPassword = System.getenv("WUMBOING_KEY_PASS") ?: "wumboing"
+            }
+        }
+    }
+
+    val hasReleaseSigning = !System.getenv("WUMBOING_KEYSTORE").isNullOrBlank()
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

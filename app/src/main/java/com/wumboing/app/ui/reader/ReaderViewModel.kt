@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wumboing.app.data.local.LocalStore
 import com.wumboing.app.data.local.ReadingRecord
+import com.wumboing.app.data.model.Chapter
 import com.wumboing.app.data.model.Source
 import com.wumboing.app.data.repository.ComicRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,10 @@ data class ReaderUiState(
     val loading: Boolean = true,
     val error: String? = null,
     val title: String = "",
-    val coverUrl: String = ""
+    val coverUrl: String = "",
+    val chapterLabel: String = "",
+    val prevLabel: String? = null,
+    val nextLabel: String? = null
 )
 
 class ReaderViewModel(
@@ -28,40 +32,86 @@ class ReaderViewModel(
 
     private lateinit var source: Source
     private lateinit var slug: String
-    private lateinit var label: String
     private var titleInfo = ""
     private var coverInfo = ""
 
     fun start(s: Source, sl: String, lb: String, title: String, cover: String) {
         source = s
         slug = sl
-        label = lb
         titleInfo = title
         coverInfo = cover
-        load()
+        updateChapter(lb)
     }
 
-    private fun load() {
-        _state.value = ReaderUiState(loading = true, title = titleInfo, coverUrl = coverInfo)
+    private fun updateChapter(lb: String, clearImages: Boolean = true) {
+        if (clearImages) {
+            _state.value = _state.value.copy(
+                loading = true,
+                error = null,
+                imageUrls = emptyList(),
+                chapterLabel = lb,
+                prevLabel = null,
+                nextLabel = null,
+                title = titleInfo,
+                coverUrl = coverInfo
+            )
+        }
         viewModelScope.launch {
-            runCatching { repository.getChapter(source, slug, label) }
+            // Load chapter pages first so reading can start.
+            val pagesResult = runCatching { repository.getChapter(source, slug, lb) }
+            var prev: String? = null
+            var next: String? = null
+            val title = titleInfo
+            val cover = coverInfo
+
+            if (pagesResult.isSuccess) {
+                // Load the chapter list to compute prev/next navigation.
+                runCatching { repository.getDetail(source, slug) }
+                    .getOrNull()
+                    ?.chapters
+                    ?.let { chapters -> computeNav(chapters, lb) }
+                    ?.also { (p, n) -> prev = p; next = n }
+            }
+
+            pagesResult
                 .onSuccess { pages ->
                     _state.value = _state.value.copy(
                         imageUrls = pages.imageUrls,
                         loading = false,
-                        title = titleInfo,
-                        coverUrl = coverInfo
+                        title = title,
+                        coverUrl = cover,
+                        chapterLabel = lb,
+                        prevLabel = prev,
+                        nextLabel = next
                     )
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         loading = false,
                         error = "Gagal memuat chapter. Periksa koneksi Anda. (${e.message})",
-                        title = titleInfo,
-                        coverUrl = coverInfo
+                        title = title,
+                        coverUrl = cover,
+                        chapterLabel = lb,
+                        prevLabel = prev,
+                        nextLabel = next
                     )
                 }
         }
+    }
+
+    fun openChapter(lb: String) {
+        if (lb == _state.value.chapterLabel) return
+        updateChapter(lb)
+    }
+
+    private fun computeNav(chapters: List<Chapter>, current: String): Pair<String?, String?> {
+        val index = chapters.indexOfFirst { it.label == current }
+        if (index < 0) return null to null
+        // chapters are listed newest-first on both sources; "prev" is the previous (newer),
+        // "next" is the next (older). We treat forward navigation as older chapters.
+        val next = if (index + 1 < chapters.size) chapters[index + 1].label else null
+        val prev = if (index - 1 >= 0) chapters[index - 1].label else null
+        return prev to next
     }
 
     fun saveProgress(pageIndex: Int) {
@@ -73,7 +123,7 @@ class ReaderViewModel(
                     slug = slug,
                     title = titleInfo,
                     coverUrl = coverInfo,
-                    chapterLabel = label,
+                    chapterLabel = _state.value.chapterLabel,
                     pageIndex = pageIndex
                 )
             )

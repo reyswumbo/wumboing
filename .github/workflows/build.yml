@@ -27,8 +27,23 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Create release keystore
+        run: |
+          mkdir -p $HOME/.wumboing
+          keytool -genkeypair -v \
+            -keystore $HOME/.wumboing/wumboing.jks \
+            -alias wumboing \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass wumboing -keypass wumboing \
+            -dname "CN=Wumboing, OU=Dev, O=Wumboing, L=City, ST=State, C=ID"
+
       - name: Build Release APK & AAB
         run: ./gradlew assembleRelease bundleRelease --no-daemon
+        env:
+          WUMBOING_KEYSTORE: ${{ runner.home }}/.wumboing/wumboing.jks
+          WUMBOING_STORE_PASS: wumboing
+          WUMBOING_KEY_ALIAS: wumboing
+          WUMBOING_KEY_PASS: wumboing
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
