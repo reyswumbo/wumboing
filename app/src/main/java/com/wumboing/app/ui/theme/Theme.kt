@@ -62,7 +62,10 @@ private val LightScheme = lightColorScheme(
     outline = Color(0xFFC4A8B2)
 )
 
-private val CuteFont: FontFamily = FontFamily(Font(R.font.fredoka_family))
+private val CuteFont: FontFamily = FontFamily(
+    Font(R.font.fredoka),
+    Font(FontFamily.Default)
+)
 
 private val AppTypography = Typography(
     displayLarge = TextStyle(fontFamily = CuteFont, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp),
