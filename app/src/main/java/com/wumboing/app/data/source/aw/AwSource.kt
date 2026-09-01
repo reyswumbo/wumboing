@@ -57,7 +57,7 @@ class AwSource(
             val b = span.selectFirst("b")?.text() ?: continue
             span.select("b").remove()
             val value = span.text().trim()
-            when (b.toLowerCase()) {
+            when (b.lowercase()) {
                 "tipe" -> type = value
                 "tahun" -> year = value
                 "author" -> author = value
