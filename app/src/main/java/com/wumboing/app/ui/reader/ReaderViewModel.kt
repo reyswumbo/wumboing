@@ -79,8 +79,9 @@ class ReaderViewModel(
 
             pagesResult
                 .onSuccess { pages ->
+                    val validUrls = pages.imageUrls.filter { it.startsWith("http") }
                     _state.value = _state.value.copy(
-                        imageUrls = pages.imageUrls,
+                        imageUrls = validUrls,
                         loading = false,
                         title = title,
                         coverUrl = cover,
@@ -88,6 +89,17 @@ class ReaderViewModel(
                         prevLabel = prev,
                         nextLabel = next
                     )
+                    if (validUrls.isEmpty()) {
+                        _state.value = _state.value.copy(
+                            loading = false,
+                            error = "Gambar chapter tidak ditemukan.",
+                            title = title,
+                            coverUrl = cover,
+                            chapterLabel = lb,
+                            prevLabel = prev,
+                            nextLabel = next
+                        )
+                    }
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(

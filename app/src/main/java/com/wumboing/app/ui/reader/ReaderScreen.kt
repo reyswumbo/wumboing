@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
 import com.wumboing.app.data.model.Source
 import com.wumboing.app.ui.common.ErrorState
 import com.wumboing.app.ui.common.LoadingState
@@ -151,17 +150,12 @@ fun ReaderScreen(
 
 @Composable
 private fun PageImage(url: String, pageIndex: Int) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-    ) {
-        SubcomposeAsyncImage(
-            model = url,
-            contentDescription = "Halaman $pageIndex",
-            modifier = Modifier.fillMaxWidth(),
-            contentScale = ContentScale.FillWidth
-        )
-    }
+    AsyncImage(
+        model = url,
+        contentDescription = "Halaman $pageIndex",
+        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A)),
+        contentScale = ContentScale.FillWidth
+    )
 }
 
 @Composable

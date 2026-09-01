@@ -8,14 +8,14 @@ Wumboing 将两个漫画内容来源整合到同一个原生 Android 应用中�
 
 ## 📖 项目介绍
 
-Wumboing 是一个使用 **Kotlin + Jetpack Compose + Material 3** 构建的原生 Android 漫画阅读应用。它聚合了以下两个漫画网站的内容：
+Wumboing 是一个使用 **Kotlin + Jetpack Compose + Material 3** 构建的原生 Android 漫画阅读应用。它聚合了两个独立的漫画内容来源：
 
-| 网站 | 应用内名称 |
+| 来源 | 应用内名称 |
 | ---- | ----------- |
-| **Wurmz** (`https://wurmz.net/`) | **WZ** |
-| **Alawale** (`https://alawale.net/`) | **AW** |
+| 来源一 | **WZ** |
+| 来源二 | **AW** |
 
-> 注意：在应用的用户界面（UI）中，只显示缩写名称 **WZ** 与 **AW**，绝不显示 "Wurmz" 或 "Alawale" 的全名。全名仅用于源代码与本文档的技术说明。
+> 注意：为保持匿名与合规，应用 UI、源代码与本文档统一使用缩写名称 **WZ** 与 **AW**，不披露来源网站的真实名称或域名。
 
 应用 UI 全程使用 **印尼语（Bahasa Indonesia）**，而本文档（README）使用中文撰写。
 
@@ -77,8 +77,8 @@ Wumboing 是一个使用 **Kotlin + Jetpack Compose + Material 3** 构建的原�
                    │
 ┌──────────────────▼──────────────────────────┐
 │              Source 层（来源）              │
-│   ├── WZ  ── Wurzum 集成                    │
-│   └── AW  ── Alawale 集成                   │
+│   ├── WZ  ── 来源一集成                    │
+│   └── AW  ── 来源二集成                   │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
@@ -104,31 +104,29 @@ Wumboing 是一个使用 **Kotlin + Jetpack Compose + Material 3** 构建的原�
 
 ## 🌐 数据来源与 Web Scraping 实现
 
-### WZ（Wurmz，`https://wurmz.net/`）
+> 两个来源均为服务端渲染的站点，内容全部包含在返回的 HTML 中，因此可以稳定地抓取。以下说明使用相对路径，不披露来源域名。
 
-Wurmz 是一个 Next.js（App Router）服务端渲染站点，所有内容都直接包含在返回的 HTML 中，因此可以稳定地抓取：
+### WZ（来源一）
 
-- **列表 / 首页**：`https://wurmz.net/`（最新更新）
+- **列表 / 首页**：`/`（最新更新）
 - **全部漫画**：`/semua-komik?sort=new&page=N`
 - **搜索**：`/search?q={keyword}`
 - **漫画详情**：`/detail/{type}/{slug}`，其中 `{type}` 为 `manga` / `manhwa` / `manhua`
   - 通过页面内嵌的 `ComicSeries` JSON-LD 结构化数据解析标题、封面、作者、体裁、简介。
-  - 通过页面内嵌的 `chapters` JSON 数组解析章节列表（`chapter_label`）。
+  - 通过页面 DOM 中的章节锚点解析章节列表。
 - **章节阅读页**：`/detail/{type}/{slug}/chapter/{number}`
-  - 通过正则从 HTML 中抽取 `https://bmcdn.my.id/...jpg` 的章节图片地址。
+  - 通过正则从 HTML 中抽取章节图片地址。
 
 解析选择器：
 - 漫画卡片：`article.comic-card`
 - 标题：`.comic-title`
-- 封面：`.cover-frame img`（`/covers/{type}__{slug}.webp`）
+- 封面：`.cover-frame img`
 - 类型徽章：`.type-badge`
 - 最新章节：`.ch-row .ch-num`
 
-### AW（Alawale，`https://alawale.net/`）
+### AW（来源二）
 
-Alawale 同样是 Next.js 服务端渲染站点，内容全部包含在 HTML 中：
-
-- **列表 / 首页**：`https://alawale.net/`（最新更新、新漫画）
+- **列表 / 首页**：`/`（最新更新、新漫画）
 - **全部漫画**：`/daftar-komik?sort=update`
 - **搜索**：`/daftar-komik?q={keyword}`
 - **漫画详情**：`/{slug}`
@@ -138,7 +136,7 @@ Alawale 同样是 Next.js 服务端渲染站点，内容全部包含在 HTML 中
   - 简介：`.syn-body`
   - 章节：`.chap-list a.chap-item`，章节地址为 `/{slug}/ch/{number}`
 - **章节阅读页**：`/{slug}/ch/{number}`
-  - 封面/章节图片同样托管在 `https://bmcdn.my.id/...jpg`，从 HTML 中抽取。
+  - 图片通过 CDN 地址从 HTML 中抽取。
 
 ### 参考实现
 
