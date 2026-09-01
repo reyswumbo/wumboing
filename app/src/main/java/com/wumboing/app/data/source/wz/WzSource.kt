@@ -9,7 +9,13 @@ import com.wumboing.app.data.source.ComicSource
 import com.wumboing.app.data.source.HttpFetcher
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.parseToJsonElement
 
 /**
  * WZ source — wraps https://wurmz.net/
@@ -22,75 +28,58 @@ class WzSource(
     override val sourceId: String = Source.WZ.id
 
     override suspend fun getHomeComics(): List<Comic> {
-        val doc = Jsoup.parse(load("/"))
+        val doc = Jsoup.parse(load("/"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun getLatestComics(page: Int): List<Comic> {
-        val doc = Jsoup.parse(load("/semua-komik?sort=new&page=$page"))
+        val doc = Jsoup.parse(load("/semua-komik?sort=new&page=$page"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun search(query: String): List<Comic> {
-        val doc = Jsoup.parse(load("/search?q=${encode(query)}"))
+        val doc = Jsoup.parse(load("/search?q=${encode(query)}"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun getDetail(slug: String): ComicDetail {
         val html = load("/detail/$slug")
-        val doc = Jsoup.parse(html)
+        val doc = Jsoup.parse(html, BASE)
 
-        val ld = doc.selectFirst("script[type=application/ld+json]")
-            ?.data()
-            ?.takeIf { it.contains("\"ComicSeries\"") }
+        val comicLd = parseComicSeries(html)
 
-        // Fall back to ComicSeries via raw substring since there are multiple ld+json blocks.
-        val comicLd = runCatching {
-            val idx = html.indexOf("\"ComicSeries\"")
-            if (idx >= 0) {
-                val start = html.lastIndexOf("{", idx)
-                val end = html.indexOf("}", idx + 20)
-                html.substring(start, end + 1)
-            } else null
-        }.getOrNull()
+        fun str(key: String): String? =
+            comicLd?.get(key)?.jsonPrimitive?.contentOrNull
 
-        val title = comicJsonValue(comicLd, "name") ?: doc.selectFirst("h2.comic-title")?.text()
+        val title = str("name") ?: doc.selectFirst("h2.comic-title")?.text()
             ?: slug.substringAfterLast("/")
 
-        val imageRaw = comicJsonValue(comicLd, "image") ?: doc.selectFirst("img[src*=covers]")?.attr("abs:src")
+        val imageRaw = str("image") ?: doc.selectFirst("img[src*=covers]")?.attr("abs:src")
         val coverUrl = imageRaw?.let { absolutize(it) } ?: ""
 
-        val altTitle = comicJsonValue(comicLd, "alternateName") ?: ""
-        val author = comicJsonValue(comicLd, "author")?.substringAfter(":\"")?.substringBefore("\"") ?: ""
-        val synopsis = comicJsonValue(comicLd, "description") ?: ""
+        val altTitle = str("alternateName") ?: ""
+        val author = comicLd?.get("author")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
+        val synopsis = str("description") ?: ""
 
-        val genres = runCatching {
-            val m = Regex("\"genre\":\\[([^\\]]*)\\]").find(html ?: "")
-            m?.groupValues?.getOrNull(1)?.let { seg ->
-                Regex("\"([^\"]+)\"").findAll(seg).map { it.groupValues[1] }.toList()
-            } ?: emptyList()
-        }.getOrDefault(emptyList())
+        val genres = comicLd?.get("genre")?.jsonArray
+            ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+            ?.toList()
+            ?: emptyList()
 
         val type = slug.substringBefore("/", missingDelimiterValue = "")
         val typeLabel = type.replaceFirstChar { it.uppercase() }
 
         val chapters = runCatching {
-            val m = Regex("\"sourceSlug\":\"([^\"]+)\"[^\\]]*?\"chapters\":(\\[.*?\\])").find(html ?: "")
-                ?: Regex("\"chapters\":(\\[.*?\\])(?:,\"activeChapter\"|\")").find(html ?: "")
-            val list = m?.groupValues?.getOrNull(2)
-                ?: Regex("\"chapters\":(\\[[^]]*\\])").find(html ?: "")?.groupValues?.getOrNull(1)
-            if (list == null) emptyList() else {
-                Regex("\"chapter_label\":\"([^\"]+)\"").findAll(list)
-                    .map { it.groupValues[1] }
-                    .map { label ->
-                        Chapter(
-                            comicSlug = slug,
-                            label = label,
-                            url = "$BASE/detail/$slug/chapter/$label"
-                        )
-                    }
-                    .toList()
-            }
+            doc.select("a[href$=/chapter/], a[href*=/chapter/]")
+                .mapNotNull { a ->
+                    val href = a.attr("href")
+                    if (!href.contains("/detail/$slug/chapter/")) return@mapNotNull null
+                    val label = href.substringAfter("/chapter/").trim()
+                    if (label.isBlank()) return@mapNotNull null
+                    Chapter(comicSlug = slug, label = label, url = "$BASE$href")
+                }
+                .distinctBy { it.label }
+                .toList()
         }.getOrDefault(emptyList())
 
         return ComicDetail(
@@ -143,10 +132,15 @@ class WzSource(
     private fun absolutize(u: String): String =
         if (u.startsWith("http")) u else BASE + u
 
-    private fun comicJsonValue(ldJson: String?, key: String): String? {
-        if (ldJson == null) return null
-        val m = Regex("\"$key\":\"((?:\\\\.|[^\"\\\\])*)\"").find(ldJson)
-        return m?.groupValues?.getOrNull(1)?.replace("\\/", "/")
+    private fun parseComicSeries(html: String): JsonObject? {
+        val json = Json { ignoreUnknownKeys = true }
+        val scriptRegex = Regex("<script\\s+type=\"application/ld\\+json\"[^>]*>(.*?)</script>", RegexOption.DOT_MATCHES_ALL)
+        for (match in scriptRegex.findAll(html)) {
+            val element = runCatching { json.parseToJsonElement(match.groupValues[1].trim()) }.getOrNull() ?: continue
+            val obj = element.jsonObject
+            if (obj["@type"]?.jsonPrimitive?.contentOrNull == "ComicSeries") return obj
+        }
+        return null
     }
 
     companion object {

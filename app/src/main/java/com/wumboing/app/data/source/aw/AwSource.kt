@@ -22,22 +22,22 @@ class AwSource(
     override val sourceId: String = Source.AW.id
 
     override suspend fun getHomeComics(): List<Comic> {
-        val doc = Jsoup.parse(load("/"))
+        val doc = Jsoup.parse(load("/"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun getLatestComics(page: Int): List<Comic> {
-        val doc = Jsoup.parse(load("/daftar-komik?sort=update"))
+        val doc = Jsoup.parse(load("/daftar-komik?sort=update"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun search(query: String): List<Comic> {
-        val doc = Jsoup.parse(load("/daftar-komik?q=${encode(query)}"))
+        val doc = Jsoup.parse(load("/daftar-komik?q=${encode(query)}"), BASE)
         return parseCards(doc)
     }
 
     override suspend fun getDetail(slug: String): ComicDetail {
-        val doc = Jsoup.parse(load("/$slug"))
+        val doc = Jsoup.parse(load("/$slug"), BASE)
 
         val title = doc.selectFirst(".detail-info h1")?.text()
             ?: slug.replace('-', ' ').replaceFirstChar { it.uppercase() }
