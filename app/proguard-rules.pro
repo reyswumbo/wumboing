@@ -16,3 +16,5 @@
 
 # jsoup
 -keep class org.jsoup.** { *; }
+-dontwarn org.jspecify.annotations.**
+-dontwarn org.jspecify.**

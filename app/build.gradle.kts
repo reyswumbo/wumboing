@@ -68,6 +68,7 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.jsoup)
+    compileOnly(libs.jspecify)
     implementation(libs.coil.compose)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
